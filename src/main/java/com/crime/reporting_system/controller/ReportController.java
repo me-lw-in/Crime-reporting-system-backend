@@ -1,129 +1,100 @@
 package com.crime.reporting_system.controller;
 
+import com.crime.reporting_system.ErrorResponse;
+import com.crime.reporting_system.MessageResponse;
+import com.crime.reporting_system.ReportDTO;
 import com.crime.reporting_system.entity.Report;
 import com.crime.reporting_system.entity.User;
-import com.crime.reporting_system.repository.ReportRepository;
-import com.crime.reporting_system.repository.UserRepository;
-import com.crime.reporting_system.service.UserService;
+import com.crime.reporting_system.service.ReportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/reports")
 public class ReportController {
 
     @Autowired
-    private ReportRepository reportRepository;
-
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private UserRepository userRepository;
+    private ReportService reportService;
 
     @PostMapping
-    public ResponseEntity<Report> submitReport(@RequestBody Report report, Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).body(null); // Unauthorized
+    public ResponseEntity<?> submitReport(@RequestBody ReportDTO reportDTO, Authentication authentication) {
+        try {
+            reportService.createReport(reportDTO, authentication);
+            return ResponseEntity.ok(new MessageResponse("Report submitted successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(401)
+                    .body(new ErrorResponse(e.getMessage(), "authentication"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("Failed to submit report: " + e.getMessage(), "general"));
         }
-        report.setStatus("pending"); // Set default status
-        report.setCaseEntity(null); // Ensure caseId is null initially
-        report.setAssignedOfficer(null); // Ensure assignedOfficer is null initially
-        User currentUser = userRepository.findByUsername(authentication.getName()); // Get submitting user
-        report.setSubmittedBy(currentUser); // Set the submitting user
-        Report savedReport = reportRepository.save(report);
-        return ResponseEntity.ok(savedReport);
     }
 
     @GetMapping("/pending")
-    public ResponseEntity<Iterable<Report>> getPendingReports() {
-        return ResponseEntity.ok(reportRepository.findByStatus("pending"));
+    public ResponseEntity<?> getPendingReports() {
+        try {
+            List<Report> reports = reportService.getPendingReports();
+            return ResponseEntity.ok(reports);
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ErrorResponse("Failed to fetch pending reports: " + e.getMessage(), "general"));
+        }
     }
 
     @GetMapping("/rejected")
-    public ResponseEntity<Iterable<Report>> getRejectedReports() {
-        return ResponseEntity.ok(reportRepository.findByStatus("rejected"));
+    public ResponseEntity<?> getRejectedReports() {
+        try {
+            List<Report> reports = reportService.getRejectedReports();
+            return ResponseEntity.ok(reports);
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ErrorResponse("Failed to fetch rejected reports: " + e.getMessage(), "general"));
+        }
     }
 
     @PutMapping("/{reportId}")
-    public ResponseEntity<Report> updateReport(@PathVariable Long reportId, @RequestBody Report reportUpdate) {
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Report not found with id: " + reportId));
-        if ("rejected".equals(report.getStatus())) {
-            return ResponseEntity.status(403).body(null); // Forbidden - Cannot edit rejected reports
+    public ResponseEntity<?> updateReport(@PathVariable Long reportId, @RequestBody Report reportUpdate) {
+        try {
+            Report updatedReport = reportService.updateReport(reportId, reportUpdate);
+            return ResponseEntity.ok(updatedReport);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(403)
+                    .body(new ErrorResponse(e.getMessage(), "report"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ErrorResponse("Failed to update report: " + e.getMessage(), "general"));
         }
-        if (report.getCaseEntity() != null) {
-            report.setTitle(reportUpdate.getTitle());
-            report.setDescription(reportUpdate.getDescription());
-            report.setLocation(reportUpdate.getLocation());
-            report.setReporterType(reportUpdate.getReporterType());
-            report.setVictimName(reportUpdate.getVictimName());
-            report.setIncidentDate(reportUpdate.getIncidentDate());
-            return ResponseEntity.ok(reportRepository.save(report));
-        }
-        return ResponseEntity.status(403).body(null); // Forbidden - Cannot edit unassigned reports
     }
 
     @GetMapping("/officers")
-    public ResponseEntity<List<User>> getOfficers() {
-        List<User> officers = userRepository.findAll().stream()
-                .filter(user -> "POLICE".equals(user.getRole()))
-                .toList();
-        return ResponseEntity.ok(officers);
+    public ResponseEntity<?> getOfficers() {
+        try {
+            List<User> officers = reportService.getOfficers();
+            return ResponseEntity.ok(officers);
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ErrorResponse("Failed to fetch officers: " + e.getMessage(), "general"));
+        }
     }
 
     @GetMapping("/all")
-    public ResponseEntity<List<ReportWithOfficer>> getAllReports(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).body(null); // Unauthorized
-        }
-        String currentUsername = authentication.getName();
-        List<Report> reports = reportRepository.findAll().stream()
-                .filter(report -> report.getSubmittedBy() != null && report.getSubmittedBy().getUsername().equals(currentUsername))
-                .collect(Collectors.toList());
-        List<ReportWithOfficer> response = reports.stream().map(report -> {
-            ReportWithOfficer rwo = new ReportWithOfficer();
-            rwo.setId(report.getId());
-            rwo.setTitle(report.getTitle());
-            rwo.setDescription(report.getDescription());
-            rwo.setLocation(report.getLocation());
-            rwo.setReporterType(report.getReporterType());
-            rwo.setVictimName(report.getVictimName());
-            rwo.setIncidentDate(report.getIncidentDate());
-            rwo.setStatus(report.getStatus());
-            if (report.getAssignedOfficer() != null) {
-                rwo.setOfficerName(report.getAssignedOfficer().getFullName());
-            } else {
-                rwo.setOfficerName(null);
-            }
-            return rwo;
-        }).collect(Collectors.toList());
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/register")
-    public ResponseEntity<String> registerUser(@RequestBody User user) {
+    public ResponseEntity<?> getAllReports(Authentication authentication) {
         try {
-            userService.registerUser(
-                    user.getUsername(),
-                    user.getPassword(),
-                    user.getRole(),
-                    user.getFullName(),
-                    user.getPhoneNumber(),
-                    user.getAddress()
-            );
-            return ResponseEntity.ok("User registered successfully");
+            List<ReportController.ReportWithOfficer> reports = reportService.getReportsForUser(authentication);
+            return ResponseEntity.ok(reports);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.status(401)
+                    .body(new ErrorResponse(e.getMessage(), "authentication"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ErrorResponse("Failed to fetch reports: " + e.getMessage(), "general"));
         }
     }
 
-    // Inner class to include officer name
     public static class ReportWithOfficer {
         private Long id;
         private String title;
@@ -135,7 +106,6 @@ public class ReportController {
         private String status;
         private String officerName;
 
-        // Getters and Setters
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
         public String getTitle() { return title; }

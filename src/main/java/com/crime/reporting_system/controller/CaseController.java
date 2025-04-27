@@ -1,5 +1,7 @@
 package com.crime.reporting_system.controller;
 
+import com.crime.reporting_system.MessageResponse;
+import com.crime.reporting_system.ErrorResponse;
 import com.crime.reporting_system.entity.Case;
 import com.crime.reporting_system.entity.Report;
 import com.crime.reporting_system.entity.User;
@@ -8,14 +10,11 @@ import com.crime.reporting_system.repository.ReportRepository;
 import com.crime.reporting_system.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/cases")
@@ -30,170 +29,164 @@ public class CaseController {
     @Autowired
     private UserRepository userRepository;
 
-    @PostMapping
-    public ResponseEntity<Case> createCase(@RequestBody Case caseObj) {
-        if (caseObj.getReports() == null) {
-            caseObj.setReports(new HashSet<>());
+    @GetMapping("/dashboard")
+    public ResponseEntity<?> getOfficerDashboard() {
+        try {
+            List<Case> cases = caseRepository.findAllWithReports(); // Use a custom query or EntityGraph
+            return ResponseEntity.ok(cases);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Failed to fetch dashboard: " + e.getMessage(), "general"));
         }
-        User currentUser = getCurrentUser();
-        caseObj.setAssignedOfficer(currentUser); // Set officer as foreign key
-        caseObj.setStatus("investigating"); // Default status for new case
-        Case savedCase = caseRepository.save(caseObj);
-        return ResponseEntity.ok(savedCase);
-    }
-
-    @PostMapping("/link")
-    public ResponseEntity<Report> linkReportToCase(@RequestParam Long reportId, @RequestParam Long caseId) {
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Report not found with id: " + reportId));
-        Case caseObj = caseRepository.findById(caseId)
-                .orElseThrow(() -> new RuntimeException("Case not found with id: " + caseId));
-        if ("resolved".equals(caseObj.getStatus())) {
-            return ResponseEntity.status(400).body(null); // Bad Request - Cannot link to resolved case
-        }
-        report.setCaseEntity(caseObj);
-        report.setAssignedOfficer(caseObj.getAssignedOfficer()); // Ensure consistency
-        report.setStatus("investigating");
-        caseObj.getReports().add(report);
-        reportRepository.save(report);
-        caseRepository.save(caseObj);
-        return ResponseEntity.ok(report);
-    }
-
-    @PutMapping("/{caseId}")
-    public ResponseEntity<Case> updateCase(@PathVariable Long caseId, @RequestBody Case caseUpdate) {
-        Case caseObj = caseRepository.findById(caseId)
-                .orElseThrow(() -> new RuntimeException("Case not found with id: " + caseId));
-        if (caseUpdate.getStatus() != null) {
-            caseObj.setStatus(caseUpdate.getStatus()); // Update status (e.g., to "resolved")
-            for (Report report : caseObj.getReports()) {
-                report.setStatus(caseUpdate.getStatus());
-                reportRepository.save(report);
-            }
-        }
-        if (caseUpdate.getAssignedOfficer() != null && caseUpdate.getAssignedOfficer().getId() != null) {
-            User newOfficer = userRepository.findById(caseUpdate.getAssignedOfficer().getId())
-                    .orElseThrow(() -> new RuntimeException("Officer not found"));
-            caseObj.setAssignedOfficer(newOfficer); // Allow reassignment
-            for (Report report : caseObj.getReports()) {
-                report.setAssignedOfficer(newOfficer);
-                reportRepository.save(report);
-            }
-        }
-        Case updatedCase = caseRepository.save(caseObj);
-        return ResponseEntity.ok(updatedCase);
     }
 
     @GetMapping("/all")
-    public ResponseEntity<Iterable<Case>> getAllCases() {
-        return ResponseEntity.ok(caseRepository.findAll()); // Comprehensive list for linking
+    public ResponseEntity<?> getAllCases() {
+        try {
+            List<Case> cases = caseRepository.findAll();
+            return ResponseEntity.ok(cases);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Failed to fetch cases", "general"));
+        }
     }
 
-    @GetMapping("/filter")
-    public ResponseEntity<Iterable<Case>> getCasesByStatus(@RequestParam String status) {
-        return ResponseEntity.ok(caseRepository.findByStatus(status));
-    }
-
-    @GetMapping("/dashboard")
-    public ResponseEntity<List<CaseDashboard>> getDashboardCases() {
-        List<Case> cases = caseRepository.findAll();
-        List<CaseDashboard> response = cases.stream().map(caze -> {
-            CaseDashboard cd = new CaseDashboard();
-            cd.setId(caze.getId());
-            cd.setCaseNumber(caze.getCaseNumber());
-            cd.setTitle(caze.getTitle());
-            cd.setDescription(caze.getDescription());
-            cd.setStatus(caze.getStatus());
-            if (caze.getAssignedOfficer() != null) {
-                cd.setOfficerName(caze.getAssignedOfficer().getFullName());
-            } else {
-                cd.setOfficerName(null);
+    @PostMapping
+    public ResponseEntity<?> createCase(@RequestBody Case caseDTO) {
+        try {
+            if (caseDTO.getCaseNumber() == null || caseDTO.getCaseNumber().isEmpty()) {
+                caseDTO.setCaseNumber("CASE-" + (caseRepository.count() + 1));
             }
-            long reportCount = caze.getReports().size();
-            cd.setReportCount(reportCount);
-            return cd;
-        }).collect(Collectors.toList());
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/reports/{reportId}/reject")
-    public ResponseEntity<Report> rejectReport(@PathVariable Long reportId) {
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Report not found with id: " + reportId));
-        report.setStatus("rejected");
-        Report updatedReport = reportRepository.save(report);
-        return ResponseEntity.ok(updatedReport);
+            Case savedCase = caseRepository.save(caseDTO);
+            return ResponseEntity.ok(savedCase);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Failed to create case", "general"));
+        }
     }
 
     @PostMapping("/reports/{reportId}/accept")
     public ResponseEntity<?> acceptReport(@PathVariable Long reportId, @RequestParam(required = false) Long caseId) {
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new RuntimeException("Report not found with id: " + reportId));
-        User currentOfficer = getCurrentUser();
-        report.setAssignedOfficer(currentOfficer);
-        report.setStatus("investigating");
-
-        if (caseId != null) {
-            Case caseObj = caseRepository.findById(caseId)
-                    .orElseThrow(() -> new RuntimeException("Case not found with id: " + caseId));
-            if ("resolved".equals(caseObj.getStatus())) {
-                return ResponseEntity.status(400).body(null); // Bad Request - Cannot link to resolved case
+        try {
+            Optional<Report> reportOpt = reportRepository.findById(reportId);
+            if (!reportOpt.isPresent()) {
+                return ResponseEntity.status(404).body(new ErrorResponse("Report not found", "reportId"));
             }
-            report.setCaseEntity(caseObj);
-            report.setAssignedOfficer(caseObj.getAssignedOfficer()); // Ensure consistency
-            caseObj.getReports().add(report);
-            caseRepository.save(caseObj);
-        } else {
-            Case newCase = new Case();
-            newCase.setCaseNumber("CASE-" + (caseRepository.count() + 1));
-            newCase.setTitle(report.getTitle());
-            newCase.setDescription(report.getDescription());
-            newCase.setStatus("investigating");
-            newCase.setAssignedOfficer(currentOfficer);
-            newCase.getReports().add(report);
-            report.setCaseEntity(newCase);
-            caseRepository.save(newCase);
+
+            Report report = reportOpt.get();
+            if (!"pending".equalsIgnoreCase(report.getStatus())) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Report is not in pending status", "status"));
+            }
+
+            // Get the authenticated officer
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            String username;
+            if (principal instanceof UserDetails) {
+                username = ((UserDetails) principal).getUsername();
+            } else {
+                username = principal.toString();
+            }
+            User officer = userRepository.findByUsername(username);
+            if (officer == null || !"POLICE".equalsIgnoreCase(officer.getRole())) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Only officers can accept reports", "general"));
+            }
+
+            Case caseEntity;
+            if (caseId != null) {
+                Optional<Case> caseOpt = caseRepository.findById(caseId);
+                if (!caseOpt.isPresent()) {
+                    return ResponseEntity.status(404).body(new ErrorResponse("Case not found", "caseId"));
+                }
+                caseEntity = caseOpt.get();
+            } else {
+                caseEntity = new Case();
+                caseEntity.setTitle(report.getTitle());
+                caseEntity.setDescription(report.getDescription());
+                caseEntity.setStatus("investigating");
+                caseEntity.setCaseNumber("CASE-" + (caseRepository.count() + 1));
+                caseEntity.setAssignedOfficer(officer); // Assign the officer to the case
+                caseEntity = caseRepository.save(caseEntity);
+            }
+
+            // Update the report
+            report.setCaseEntity(caseEntity);
+            report.setStatus("investigating"); // Changed from "accepted" to "investigating"
+            report.setAssignedOfficer(officer); // Assign the officer to the report
+            reportRepository.save(report);
+
+            return ResponseEntity.ok(new MessageResponse("Report accepted and linked to case"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Failed to accept report: " + e.getMessage(), "general"));
         }
-        return ResponseEntity.ok(reportRepository.save(report));
     }
 
-    private User getCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new RuntimeException("No authenticated user found");
+    @PostMapping("/reports/{reportId}/reject")
+    public ResponseEntity<?> rejectReport(@PathVariable Long reportId, @RequestParam String rejectionReason) {
+        try {
+            Optional<Report> reportOpt = reportRepository.findById(reportId);
+            if (!reportOpt.isPresent()) {
+                return ResponseEntity.status(404).body(new ErrorResponse("Report not found", "reportId"));
+            }
+
+            Report report = reportOpt.get();
+            if (!"pending".equalsIgnoreCase(report.getStatus())) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Report is not in pending status", "status"));
+            }
+
+            report.setStatus("rejected");
+            report.setRejectionReason(rejectionReason);
+            reportRepository.save(report);
+
+            return ResponseEntity.ok(new MessageResponse("Report rejected successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Failed to reject report", "general"));
         }
-        String username = authentication.getName();
-        User user = userRepository.findByUsername(username);
-        if (user == null) {
-            throw new RuntimeException("User not found: " + username);
-        }
-        return user;
     }
 
-    // Inner class for dashboard response (updated with reportCount)
-    public static class CaseDashboard {
-        private Long id;
-        private String caseNumber;
-        private String title;
-        private String description;
-        private String status;
-        private String officerName;
-        private long reportCount;
+    @PutMapping("/{caseId}/reassign")
+    public ResponseEntity<?> reassignCase(@PathVariable Long caseId, @RequestParam Long officerId) {
+        try {
+            Optional<Case> caseOpt = caseRepository.findById(caseId);
+            if (!caseOpt.isPresent()) {
+                return ResponseEntity.status(404).body(new ErrorResponse("Case not found", "caseId"));
+            }
 
-        // Getters and Setters
-        public Long getId() { return id; }
-        public void setId(Long id) { this.id = id; }
-        public String getCaseNumber() { return caseNumber; }
-        public void setCaseNumber(String caseNumber) { this.caseNumber = caseNumber; }
-        public String getTitle() { return title; }
-        public void setTitle(String title) { this.title = title; }
-        public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
-        public String getStatus() { return status; }
-        public void setStatus(String status) { this.status = status; }
-        public String getOfficerName() { return officerName; }
-        public void setOfficerName(String officerName) { this.officerName = officerName; }
-        public long getReportCount() { return reportCount; }
-        public void setReportCount(long reportCount) { this.reportCount = reportCount; }
+            Optional<User> officerOpt = userRepository.findById(officerId);
+            if (!officerOpt.isPresent()) {
+                return ResponseEntity.status(404).body(new ErrorResponse("Officer not found", "officerId"));
+            }
+
+            User officer = officerOpt.get();
+            if (!"officer".equalsIgnoreCase(officer.getRole())) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("User is not an officer", "officerId"));
+            }
+
+            Case caseEntity = caseOpt.get();
+            caseEntity.setAssignedOfficer(officer);
+            caseRepository.save(caseEntity);
+
+            return ResponseEntity.ok(new MessageResponse("Case reassigned successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Failed to reassign case", "general"));
+        }
+    }
+
+    @PutMapping("/{caseId}/status")
+    public ResponseEntity<?> updateCaseStatus(@PathVariable Long caseId, @RequestParam String status) {
+        try {
+            Optional<Case> caseOpt = caseRepository.findById(caseId);
+            if (!caseOpt.isPresent()) {
+                return ResponseEntity.status(404).body(new ErrorResponse("Case not found", "caseId"));
+            }
+
+            Case caseEntity = caseOpt.get();
+            if (!"investigating".equalsIgnoreCase(caseEntity.getStatus()) && !"resolved".equalsIgnoreCase(status)) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Invalid status transition", "status"));
+            }
+
+            caseEntity.setStatus(status);
+            caseRepository.save(caseEntity);
+
+            return ResponseEntity.ok(new MessageResponse("Case status updated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Failed to update case status: " + e.getMessage(), "general"));
+        }
     }
 }

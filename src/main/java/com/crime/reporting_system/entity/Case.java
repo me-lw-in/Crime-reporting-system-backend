@@ -13,13 +13,13 @@ public class Case {
     private Long id;
 
     private String caseNumber;
-    private String title; // New field for case title
+    private String title;
     private String description;
-    private String status; // e.g., "investigating", "resolved"
+    private String status;
 
     @ManyToOne
     @JoinColumn(name = "assigned_officer_id")
-    private User assignedOfficer; // Foreign key to users
+    private User assignedOfficer;
 
     @ManyToMany
     @JoinTable(
@@ -29,7 +29,6 @@ public class Case {
     )
     private Set<Report> reports = new HashSet<>();
 
-    // Constructors
     public Case() {}
 
     public Case(String caseNumber, String title, String description, String status, User assignedOfficer) {
@@ -40,7 +39,6 @@ public class Case {
         this.assignedOfficer = assignedOfficer;
     }
 
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getCaseNumber() { return caseNumber; }
