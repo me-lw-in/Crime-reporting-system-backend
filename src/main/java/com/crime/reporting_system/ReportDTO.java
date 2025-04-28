@@ -7,6 +7,7 @@ public class ReportDTO {
     private String reporterType;
     private String victimName;
     private String incidentDate;
+    private String rejectionReason;
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }

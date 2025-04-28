@@ -67,6 +67,7 @@ public class ReportService {
             rwo.setVictimName(report.getVictimName());
             rwo.setIncidentDate(report.getIncidentDate());
             rwo.setStatus(report.getStatus());
+            rwo.setRejectionReason(report.getRejectionReason());
             if (report.getAssignedOfficer() != null) {
                 rwo.setOfficerName(report.getAssignedOfficer().getFullName());
             } else {

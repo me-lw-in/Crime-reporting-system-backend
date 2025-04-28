@@ -76,7 +76,6 @@ public class CaseController {
                 return ResponseEntity.badRequest().body(new ErrorResponse("Report is not in pending status", "status"));
             }
 
-            // Get the authenticated officer
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             String username;
             if (principal instanceof UserDetails) {
@@ -102,14 +101,16 @@ public class CaseController {
                 caseEntity.setDescription(report.getDescription());
                 caseEntity.setStatus("investigating");
                 caseEntity.setCaseNumber("CASE-" + (caseRepository.count() + 1));
-                caseEntity.setAssignedOfficer(officer); // Assign the officer to the case
+                caseEntity.setAssignedOfficer(officer);
                 caseEntity = caseRepository.save(caseEntity);
             }
 
-            // Update the report
+            // Bidirectional relationship update
             report.setCaseEntity(caseEntity);
-            report.setStatus("investigating"); // Changed from "accepted" to "investigating"
-            report.setAssignedOfficer(officer); // Assign the officer to the report
+            caseEntity.getReports().add(report); // Add report to case's reports set
+            caseRepository.save(caseEntity); // Ensure the join table is updated
+            report.setStatus("investigating");
+            report.setAssignedOfficer(officer);
             reportRepository.save(report);
 
             return ResponseEntity.ok(new MessageResponse("Report accepted and linked to case"));

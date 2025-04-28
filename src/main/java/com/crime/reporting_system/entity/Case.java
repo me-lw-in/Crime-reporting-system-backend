@@ -1,5 +1,6 @@
 package com.crime.reporting_system.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 import java.util.HashSet;
@@ -27,6 +28,7 @@ public class Case {
             joinColumns = @JoinColumn(name = "case_id"),
             inverseJoinColumns = @JoinColumn(name = "report_id")
     )
+    @JsonManagedReference // Marks the forward side
     private Set<Report> reports = new HashSet<>();
 
     public Case() {}

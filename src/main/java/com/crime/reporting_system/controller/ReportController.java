@@ -105,6 +105,7 @@ public class ReportController {
         private String incidentDate;
         private String status;
         private String officerName;
+        private String rejectionReason;
 
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
@@ -124,5 +125,8 @@ public class ReportController {
         public void setStatus(String status) { this.status = status; }
         public String getOfficerName() { return officerName; }
         public void setOfficerName(String officerName) { this.officerName = officerName; }
+        public String getRejectionReason() { return rejectionReason; } // Add getter
+        public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; } // Add setter
+
     }
 }

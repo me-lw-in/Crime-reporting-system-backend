@@ -1,5 +1,6 @@
 package com.crime.reporting_system.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 @Entity
@@ -20,6 +21,7 @@ public class Report {
 
     @ManyToOne
     @JoinColumn(name = "case_id")
+    @JsonBackReference // Marks the back side to prevent recursion
     private Case caseEntity;
 
     @ManyToOne
