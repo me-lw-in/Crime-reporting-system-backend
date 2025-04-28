@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface CaseRepository extends JpaRepository<Case, Long> {
-    @EntityGraph(attributePaths = {"reports"})
+    @EntityGraph(attributePaths = {"reports", "assignedOfficer"})
     @Query("SELECT c FROM Case c")
     List<Case> findAllWithReports();
 }

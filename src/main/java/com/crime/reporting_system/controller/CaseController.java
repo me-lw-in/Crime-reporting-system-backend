@@ -33,6 +33,7 @@ public class CaseController {
     public ResponseEntity<?> getOfficerDashboard() {
         try {
             List<Case> cases = caseRepository.findAllWithReports(); // Use a custom query or EntityGraph
+
             return ResponseEntity.ok(cases);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ErrorResponse("Failed to fetch dashboard: " + e.getMessage(), "general"));
@@ -150,12 +151,12 @@ public class CaseController {
 
             Optional<User> officerOpt = userRepository.findById(officerId);
             if (!officerOpt.isPresent()) {
-                return ResponseEntity.status(404).body(new ErrorResponse("Officer not found", "officerId"));
+                return ResponseEntity.status(404).body(new ErrorResponse("POLICE not found", "officerId"));
             }
 
             User officer = officerOpt.get();
-            if (!"officer".equalsIgnoreCase(officer.getRole())) {
-                return ResponseEntity.badRequest().body(new ErrorResponse("User is not an officer", "officerId"));
+            if (!"POLICE".equalsIgnoreCase(officer.getRole())) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("User is not an POLICE", "officerId"));
             }
 
             Case caseEntity = caseOpt.get();
