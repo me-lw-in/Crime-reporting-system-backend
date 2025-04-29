@@ -184,6 +184,13 @@ public class CaseController {
             }
 
             caseEntity.setStatus(status);
+
+            // Update the status of all associated reports
+            for (Report report : caseEntity.getReports()) {
+                report.setStatus(status); // Set the same status as the case
+                reportRepository.save(report); // Persist the change to the report
+            }
+
             caseRepository.save(caseEntity);
 
             return ResponseEntity.ok(new MessageResponse("Case status updated successfully"));

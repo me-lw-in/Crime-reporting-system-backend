@@ -100,7 +100,7 @@ public class UserController {
 
             List<UserDTO> officers = userService.getAllOfficers()
                     .stream()
-                    .filter(user -> !user.getUsername().equals(currentUsername)) // Exclude the logged-in user
+
                     .map(user -> {
                         UserDTO userDTO = new UserDTO();
                         userDTO.setId(user.getId());
