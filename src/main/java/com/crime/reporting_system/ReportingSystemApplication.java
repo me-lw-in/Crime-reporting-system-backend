@@ -10,11 +10,9 @@ import org.springframework.context.annotation.ComponentScan;
 public class ReportingSystemApplication {
 
 	public static void main(String[] args) {
-		Dotenv dotenv = Dotenv.configure().load(); // Load .env file
-		System.out.println("DB_HOST: " + dotenv.get("DB_HOST"));
-		System.out.println("DB_PORT: " + dotenv.get("DB_PORT"));
+
 		SpringApplication.run(ReportingSystemApplication.class, args);
-		System.out.println("hello main");
+		System.out.println("Running successfully!");
 	}
 
 }
