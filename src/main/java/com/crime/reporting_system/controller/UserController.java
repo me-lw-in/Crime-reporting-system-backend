@@ -10,10 +10,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.sql.SQLIntegrityConstraintViolationException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -78,18 +74,13 @@ public class UserController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
-        if (authentication != null) {
-            request.getSession(false).invalidate();
-        }
-        SecurityContextHolder.clearContext();
-        return ResponseEntity.ok().body("Logged out successfully");
+    public ResponseEntity<?> logout() {
+        return ResponseEntity.ok().body(new MessageResponse("Logged out successfully"));
     }
 
     @GetMapping("/officers")
     public ResponseEntity<?> getOfficers() {
         try {
-            // Get the authenticated user's username
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             String currentUsername;
             if (principal instanceof UserDetails) {
@@ -100,7 +91,6 @@ public class UserController {
 
             List<UserDTO> officers = userService.getAllOfficers()
                     .stream()
-
                     .map(user -> {
                         UserDTO userDTO = new UserDTO();
                         userDTO.setId(user.getId());

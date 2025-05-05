@@ -7,7 +7,6 @@ import com.crime.reporting_system.entity.User;
 import com.crime.reporting_system.repository.ReportRepository;
 import com.crime.reporting_system.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,8 +21,8 @@ public class ReportService {
     @Autowired
     private UserRepository userRepository;
 
-    public Report createReport(ReportDTO reportDTO, Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
+    public Report createReport(ReportDTO reportDTO, String username) {
+        if (username == null) {
             throw new RuntimeException("Unauthorized: Please log in");
         }
 
@@ -38,7 +37,7 @@ public class ReportService {
         report.setCaseEntity(null);
         report.setAssignedOfficer(null);
 
-        User currentUser = userRepository.findByUsername(authentication.getName());
+        User currentUser = userRepository.findByUsername(username);
         if (currentUser == null) {
             throw new RuntimeException("User not found");
         }
@@ -47,14 +46,13 @@ public class ReportService {
         return reportRepository.save(report);
     }
 
-    public List<ReportController.ReportWithOfficer> getReportsForUser(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
+    public List<ReportController.ReportWithOfficer> getReportsForUser(String username) {
+        if (username == null) {
             throw new RuntimeException("Unauthorized: Please log in");
         }
 
-        String currentUsername = authentication.getName();
         List<Report> reports = reportRepository.findAll().stream()
-                .filter(report -> report.getSubmittedBy() != null && report.getSubmittedBy().getUsername().equals(currentUsername))
+                .filter(report -> report.getSubmittedBy() != null && report.getSubmittedBy().getUsername().equals(username))
                 .collect(Collectors.toList());
 
         return reports.stream().map(report -> {

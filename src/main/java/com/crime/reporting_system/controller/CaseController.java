@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -32,8 +33,7 @@ public class CaseController {
     @GetMapping("/dashboard")
     public ResponseEntity<?> getOfficerDashboard() {
         try {
-            List<Case> cases = caseRepository.findAllWithReports(); // Use a custom query or EntityGraph
-
+            List<Case> cases = caseRepository.findAllWithReports();
             return ResponseEntity.ok(cases);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ErrorResponse("Failed to fetch dashboard: " + e.getMessage(), "general"));
@@ -105,10 +105,9 @@ public class CaseController {
                 caseEntity = caseRepository.save(caseEntity);
             }
 
-            // Bidirectional relationship update
             report.setCaseEntity(caseEntity);
-            caseEntity.getReports().add(report); // Add report to case's reports set
-            caseRepository.save(caseEntity); // Ensure the join table is updated
+            caseEntity.getReports().add(report);
+            caseRepository.save(caseEntity);
             report.setStatus("investigating");
             report.setAssignedOfficer(officer);
             reportRepository.save(report);
@@ -185,10 +184,9 @@ public class CaseController {
 
             caseEntity.setStatus(status);
 
-            // Update the status of all associated reports
             for (Report report : caseEntity.getReports()) {
-                report.setStatus(status); // Set the same status as the case
-                reportRepository.save(report); // Persist the change to the report
+                report.setStatus(status);
+                reportRepository.save(report);
             }
 
             caseRepository.save(caseEntity);

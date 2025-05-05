@@ -8,7 +8,8 @@ import com.crime.reporting_system.entity.User;
 import com.crime.reporting_system.service.ReportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,9 +22,16 @@ public class ReportController {
     private ReportService reportService;
 
     @PostMapping
-    public ResponseEntity<?> submitReport(@RequestBody ReportDTO reportDTO, Authentication authentication) {
+    public ResponseEntity<?> submitReport(@RequestBody ReportDTO reportDTO) {
         try {
-            reportService.createReport(reportDTO, authentication);
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            String username;
+            if (principal instanceof UserDetails) {
+                username = ((UserDetails) principal).getUsername();
+            } else {
+                username = principal.toString();
+            }
+            reportService.createReport(reportDTO, username);
             return ResponseEntity.ok(new MessageResponse("Report submitted successfully"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(401)
@@ -82,9 +90,16 @@ public class ReportController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<?> getAllReports(Authentication authentication) {
+    public ResponseEntity<?> getAllReports() {
         try {
-            List<ReportController.ReportWithOfficer> reports = reportService.getReportsForUser(authentication);
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            String username;
+            if (principal instanceof UserDetails) {
+                username = ((UserDetails) principal).getUsername();
+            } else {
+                username = principal.toString();
+            }
+            List<ReportController.ReportWithOfficer> reports = reportService.getReportsForUser(username);
             return ResponseEntity.ok(reports);
         } catch (RuntimeException e) {
             return ResponseEntity.status(401)
@@ -125,8 +140,7 @@ public class ReportController {
         public void setStatus(String status) { this.status = status; }
         public String getOfficerName() { return officerName; }
         public void setOfficerName(String officerName) { this.officerName = officerName; }
-        public String getRejectionReason() { return rejectionReason; } // Add getter
-        public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; } // Add setter
-
+        public String getRejectionReason() { return rejectionReason; }
+        public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
     }
 }
