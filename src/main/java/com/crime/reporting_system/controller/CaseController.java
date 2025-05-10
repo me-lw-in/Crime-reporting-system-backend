@@ -1,7 +1,7 @@
 package com.crime.reporting_system.controller;
 
-import com.crime.reporting_system.MessageResponse;
-import com.crime.reporting_system.ErrorResponse;
+import com.crime.reporting_system.response.MessageResponse;
+import com.crime.reporting_system.response.ErrorResponse;
 import com.crime.reporting_system.entity.Case;
 import com.crime.reporting_system.entity.Report;
 import com.crime.reporting_system.entity.User;
@@ -163,9 +163,15 @@ public class CaseController {
             caseEntity.setAssignedOfficer(officer);
             caseRepository.save(caseEntity);
 
+            // Update the assigned officer for all related reports
+            for (Report report : caseEntity.getReports()) {
+                report.setAssignedOfficer(officer);
+                reportRepository.save(report);
+            }
+
             return ResponseEntity.ok(new MessageResponse("Case reassigned successfully"));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(new ErrorResponse("Failed to reassign case", "general"));
+            return ResponseEntity.status(500).body(new ErrorResponse("Failed to reassign case: " + e.getMessage(), "general"));
         }
     }
 

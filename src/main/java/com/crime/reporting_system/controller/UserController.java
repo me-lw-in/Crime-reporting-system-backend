@@ -1,8 +1,8 @@
 package com.crime.reporting_system.controller;
 
-import com.crime.reporting_system.MessageResponse;
-import com.crime.reporting_system.UserDTO;
-import com.crime.reporting_system.ErrorResponse;
+import com.crime.reporting_system.response.MessageResponse;
+import com.crime.reporting_system.dto.UserDTO;
+import com.crime.reporting_system.response.ErrorResponse;
 import com.crime.reporting_system.service.UserService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;

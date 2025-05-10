@@ -1,6 +1,6 @@
 package com.crime.reporting_system.service;
 
-import com.crime.reporting_system.ReportDTO;
+import com.crime.reporting_system.dto.ReportDTO;
 import com.crime.reporting_system.controller.ReportController;
 import com.crime.reporting_system.entity.Report;
 import com.crime.reporting_system.entity.User;

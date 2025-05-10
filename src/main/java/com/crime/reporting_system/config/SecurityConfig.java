@@ -1,6 +1,5 @@
-package com.crime.reporting_system;
+package com.crime.reporting_system.config;
 
-import com.crime.reporting_system.config.JwtAuthenticationFilter;
 import com.crime.reporting_system.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;

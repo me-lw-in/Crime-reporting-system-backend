@@ -1,8 +1,8 @@
 package com.crime.reporting_system.controller;
 
-import com.crime.reporting_system.ErrorResponse;
-import com.crime.reporting_system.MessageResponse;
-import com.crime.reporting_system.ReportDTO;
+import com.crime.reporting_system.response.ErrorResponse;
+import com.crime.reporting_system.response.MessageResponse;
+import com.crime.reporting_system.dto.ReportDTO;
 import com.crime.reporting_system.entity.Report;
 import com.crime.reporting_system.entity.User;
 import com.crime.reporting_system.service.ReportService;

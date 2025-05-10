@@ -1,4 +1,4 @@
-package com.crime.reporting_system;
+package com.crime.reporting_system.response;
 
 public class ErrorResponse {
     private String message;

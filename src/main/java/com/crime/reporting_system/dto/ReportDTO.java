@@ -1,4 +1,4 @@
-package com.crime.reporting_system;
+package com.crime.reporting_system.dto;
 
 public class ReportDTO {
     private String title;

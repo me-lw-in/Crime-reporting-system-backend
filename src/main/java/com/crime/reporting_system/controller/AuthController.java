@@ -1,6 +1,6 @@
 package com.crime.reporting_system.controller;
 
-import com.crime.reporting_system.ErrorResponse;
+import com.crime.reporting_system.response.ErrorResponse;
 import com.crime.reporting_system.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
